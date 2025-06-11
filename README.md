@@ -1,10 +1,12 @@
 #  Body and Head Shape-Based Biometric Recognition System
 
 A biometric recognition and verification system that relies solely on **body and head shape**, without using facial recognition. This approach is designed for scenarios where the subject is not facing the camera or where face recognition is not feasible.
+![Example image](images/example_image.jpg)
 
 ---
 
 ##  Summary
+
 
 This system:
 - Recognizes and verifies individuals using silhouette and shape features.
@@ -44,6 +46,9 @@ This system:
 
 ##  Results
 
+![roc](images/roc.png)
+![plot](images/variation_plot.png)
+
 | Task                | Metric                     | Score       |
 |---------------------|----------------------------|-------------|
 | **Recognition**     | Rank-1 Accuracy (CCR)      | 68%         |
@@ -78,8 +83,3 @@ This system:
 ##  Dataset
 
 - Based on a subset of the **Large Southampton Gait Database**
-- Dataset not included in this repository
-
----
-
-
