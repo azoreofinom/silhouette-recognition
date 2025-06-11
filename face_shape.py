@@ -1,12 +1,9 @@
 import cv2
 import numpy as np
 import os
-#Import math Library
 import math
-
 from sklearn.decomposition import PCA
 from sklearn.model_selection import GridSearchCV
-
 from align import align_images
 from sklearn.neighbors import KNeighborsClassifier
 from pyefd import elliptic_fourier_descriptors
@@ -22,11 +19,7 @@ from skimage.morphology import skeletonize
 from scipy.optimize import brentq
 from scipy.interpolate import interp1d
 import mediapipe as mp
-
 from skimage.feature import hog
-
-
-
 import cv2
 import numpy as np
 
@@ -43,17 +36,8 @@ def find_head_box(binary_image):
             x = column_index - 125
             break
 
-
     h = 210
     w = 250
-
-
-    # cv2.rectangle(binary_image, (x, y), (x + w, y + h), (127, 127, 0), 2)
-    # binary_image = cv2.resize(binary_image, (960, 480))
-    #
-    # cv2.imshow("Bounding Box", binary_image)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
 
     return x,y,w,h
 
@@ -71,11 +55,7 @@ def get_head_features(img):
     x, y, width, height = cv2.boundingRect(contour)
 
     bounding_features = np.array([height,width,area,perimeter])
-    # bounding_features = np.array([height])
-    # features = np.concatenate((hu_moments, coeffs.flatten()[3:]))
-    # features = hu_moments
     features = np.concatenate((bounding_features, hu_moments, coeffs.flatten()[3:]))
-    # features = coeffs.flatten()[3:]
     return features
 
 
@@ -98,12 +78,6 @@ def pose_estimation(image):
 
         # Define limb pairs (e.g., shoulder to elbow, elbow to wrist, hip to knee, knee to ankle)
         limbs = {
-            # 'left_upper_arm': (mp_pose.PoseLandmark.LEFT_SHOULDER, mp_pose.PoseLandmark.LEFT_ELBOW),
-            # 'left_lower_arm': (mp_pose.PoseLandmark.LEFT_ELBOW, mp_pose.PoseLandmark.LEFT_WRIST),
-            # 'right_upper_arm': (mp_pose.PoseLandmark.RIGHT_SHOULDER, mp_pose.PoseLandmark.RIGHT_ELBOW),
-            # 'right_lower_arm': (mp_pose.PoseLandmark.RIGHT_ELBOW, mp_pose.PoseLandmark.RIGHT_WRIST),
-            # 'left_upper_leg': (mp_pose.PoseLandmark.LEFT_HIP, mp_pose.PoseLandmark.LEFT_KNEE),
-            # 'left_lower_leg': (mp_pose.PoseLandmark.LEFT_KNEE, mp_pose.PoseLandmark.LEFT_ANKLE),
             'torso'          :(mp_pose.PoseLandmark.RIGHT_SHOULDER,mp_pose.PoseLandmark.RIGHT_HIP),
             'right_upper_leg': (mp_pose.PoseLandmark.RIGHT_HIP, mp_pose.PoseLandmark.RIGHT_KNEE),
             'right_lower_leg': (mp_pose.PoseLandmark.RIGHT_KNEE, mp_pose.PoseLandmark.RIGHT_ANKLE)
@@ -172,18 +146,12 @@ def extract_features(body):
 
     # Calculate Hu Moments
     hu_moments = cv2.HuMoments(M).flatten()
-    # for i in range(0, 7):
-    #     hu_moments[i] = -1 * math.copysign(1.0, hu_moments[i]) * math.log10(abs(hu_moments[i]))
-
-
     coeffs = elliptic_fourier_descriptors(np.squeeze(contour), order=10, normalize=True)
 
     # Get bounding box of the largest contour
     x, y, width, height = cv2.boundingRect(contour)
     # Calculate the ratio of height to width
     ratio = height / width
-    # print(f"ratio:{ratio}")
-
     if ratio>3.8:
         orientation = 1
     else:
@@ -191,43 +159,27 @@ def extract_features(body):
 
 
     bounding_features = np.array([height])
-    # bounding_features = np.array([])
     features = bounding_features
-    # features = np.concatenate((bounding_features, hu_moments))
-    # features = np.concatenate((bounding_features, coeffs.flatten()[3:]))
-    # features = np.concatenate((bounding_features,hu_moments, coeffs.flatten()[3:]))
     return features
 
 
 def extract_body(image):
-    # Step 1: Read the Image
-    # image = cv2.imread('training/020z071pf.jpg')
+    #  Read the Image
     background = cv2.imread('background.jpg')
 
     image, h = align_images(background, image)
-    # img_gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
-    # back_gray = cv2.cvtColor(background,cv2.COLOR_BGR2GRAY)
-
     foreground_mask = cv2.absdiff(image, background)
-    # foreground_mask = cv2.absdiff(img_gray, back_gray)
-
     foreground_mask = cv2.cvtColor(foreground_mask,cv2.COLOR_BGR2GRAY)
 
-    #cropping to only include green background (cutting shoes off as can't extract them properly...
-    # foreground_mask = foreground_mask[320:, 750:1800]
+    #cropping to only include green background (cutting shoes off as can't extract them properly)
     foreground_mask = foreground_mask[320:1580, 750:1800]
-    # imS = cv2.resize(foreground_mask, (960, 540))
 
-    # threshold = 40 works pretty well, use adaptive??
-    _, foreground_mask_binary = cv2.threshold(foreground_mask,40, 255, cv2.THRESH_BINARY)
+    threshold = 40 
+    _, foreground_mask_binary = cv2.threshold(foreground_mask,threshold, 255, cv2.THRESH_BINARY)
     return foreground_mask_binary
 
 def extract_full_features(image):
-    # print(image.shape)
-    # sift = cv2.SIFT_create()
-    # kp, des = sift.detectAndCompute(image, None)
-    # print(des.shape)
-
+   
     fd, hog_image = hog(
         image,
         orientations=8,
@@ -238,14 +190,9 @@ def extract_full_features(image):
     )
     print(fd.shape)
 
-    # # Flatten SIFT descriptors
-    # sift_descriptors_flat = des.reshape(-1)
-
     # Flatten HOG features
     hog_features_flat = fd.flatten()
 
-    # Concatenate SIFT and HOG feature vectors
-    # feature_vector = np.concatenate((sift_descriptors_flat, hog_features_flat))
     feature_vector = hog_features_flat
     return feature_vector
 
@@ -289,8 +236,6 @@ for filename in os.listdir(folder_path):
         subject_image = image[320:1580, 750:1800]
 
         feature_vector = np.concatenate((feature_vector, head_features))
-        # feature_vector = np.concatenate((feature_vector, head_features,np.array(limbs)))
-
         features.append(feature_vector)
 
 # Close all OpenCV windows
@@ -321,8 +266,6 @@ for filename in os.listdir(folder_path):
 
 
         feature_vector = np.concatenate((feature_vector, head_features))
-        # feature_vector = np.concatenate((feature_vector, head_features,np.array(limbs)))
-
         test_features.append(feature_vector)
 
 
@@ -331,11 +274,9 @@ scaled_features = scaler.fit_transform(features)
 scaled_test_features = scaler.transform(test_features)
 print(scaled_features[0])
 
-# Step 4: Perform PCA
-pca = PCA(n_components=20)  # Reduce to 10 principal components
-# X_train_pca = pca.fit_transform(scaled_features)
-# X_test_pca = pca.transform(scaled_test_features)
-#
+# Perform PCA
+pca = PCA(n_components=20)  # Reduce to 20 principal components
+
 X_train_pca = scaled_features
 X_test_pca = scaled_test_features
 
@@ -354,11 +295,9 @@ for C in param_grid['C']:
         for kernel in param_grid['kernel']:
             # Train SVM model with current parameters
             svm = SVC(C=C, gamma=gamma, kernel=kernel)
-            # svm.fit(scaled_features, labels)
             svm.fit(X_train_pca,labels)
 
             # Evaluate model
-            # y_pred = svm.predict(scaled_test_features)
             y_pred = svm.predict(X_test_pca)
             accuracy = accuracy_score(test_labels, y_pred)
 
@@ -418,7 +357,7 @@ for subject in set(labels):
     for f1, f2 in combinations(subject_features, 2):
         intra_class_distances.append(euclidean(f1, f2))
 
-# Step 2: Calculate Inter-Class Variations
+# Calculate Inter-Class Variations
 inter_class_distances = []
 for subject1, subject2 in combinations(set(labels), 2):
     subject1_features = [features[i] for i in range(len(labels)) if labels[i] == subject1]
@@ -427,7 +366,7 @@ for subject1, subject2 in combinations(set(labels), 2):
         for f2 in subject2_features:
             inter_class_distances.append(euclidean(f1, f2))
 
-# Step 3: Plot Histograms
+# Plot Histograms
 plt.hist(intra_class_distances, bins=50, alpha=0.5, label='Intra-Class', color='blue', density=True)
 plt.hist(inter_class_distances, bins=50, alpha=0.5, label='Inter-Class', color='red', density=True)
 plt.xlabel('Distance')
@@ -510,7 +449,6 @@ X_test = np.array([np.concatenate([pair[0], pair[1]]) for pair in test_pairs])
 print(X_train.shape)
 print(X_test.shape)
 # Train a binary classifier
-# svm = SVC(C=best_params['C'], gamma=best_params['gamma'], kernel=best_params['kernel'],probability=True)
 svm = SVC(probability=True, C=1e-6,gamma=1, kernel='rbf')
 svm.fit(X_train, pair_labels)
 
